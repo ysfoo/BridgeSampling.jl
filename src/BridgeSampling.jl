@@ -1,5 +1,5 @@
 module BridgeSampling
-using Turing, StatsBase, Printf, AbstractMCMC, Bijectors, DynamicPPL
+using Turing, StatsBase, Printf, AbstractMCMC, Bijectors, DynamicPPL, LogExpFunctions
 using LinearAlgebra: dot
 import Base: show
 
@@ -31,9 +31,12 @@ end
     * `samples` : An ndims x nsamples matrix. The eltype can be either a scalar or an array of any dimension (e.g. multivariate parameters)
     * `log_posterior` : A function that takes one argument (one sample) and outputs the unnormalized log posterior probability (log joint)
     * `lb` and `ub` : respectively the lower and upper boundary of each dimension in the samples
+    * `n_prop` : Number of proposal samples
     * `tol` : tolerance for the iterative scheme. Default = `1e-10`
     * `maxiter` : maximum number of iterations of the iterative scheme. Default = `1000`
     * `names` : A vector of names for each dimension in the samples. If specified, the input argument of `log_posterior` will be a `NamedTuple`. Default = `nothing`
+    * `use_ess` : Whether the iterative algorithm estimates the effective sample size of the integrand based on the posterior samples. 
+                  Note that the case of multiple chains is not dealt with correctly. Default= `true`
 
     # Examples
     ```julia 
@@ -55,7 +58,7 @@ end
         ISSN 0022-2496,
         https://doi.org/10.1016/j.jmp.2017.09.005.
 """
-function bridgesampling(samples::AbstractMatrix, log_posterior::Function, lb, ub; tol=1e-10, maxiter=1_000, names=nothing)
+function bridgesampling(samples::AbstractMatrix, log_posterior::Function, lb, ub; n_prop=nothing, tol=1e-10, maxiter=1_000, names=nothing, use_ess=true)
     lb = informissing.(lb)
     ub = informissing.(ub)
     nd, ns = size(samples) 
@@ -64,8 +67,10 @@ function bridgesampling(samples::AbstractMatrix, log_posterior::Function, lb, ub
     ## Split samples
     smp1 = samples[:,1:2:end]
     smp2 = samples[:,2:2:end]
-    n₁ = size(smp1, 2)
-    n₂ = size(smp2, 2)
+    n_post = size(smp1, 2)
+    if n_prop === nothing
+        n_prop = size(smp2, 2)
+    end
 
     ## Transform samples
     trans_smp1 = transform(smp1, lb, ub)
@@ -77,7 +82,7 @@ function bridgesampling(samples::AbstractMatrix, log_posterior::Function, lb, ub
     prop_dist = proposal(wide_smp2)
 
     ## Sample from the proposal
-    prop_samples = rand(prop_dist, n₂)
+    prop_samples = rand(prop_dist, n_prop)
     comp_prop_smp = format_samples(prop_samples, name_map) # Reformat for posterior evaluation
     comp_prop_smp = invtransform(comp_prop_smp, lb, ub) # Inverse transform to evaluate the posterior
 
@@ -86,7 +91,7 @@ function bridgesampling(samples::AbstractMatrix, log_posterior::Function, lb, ub
     p_prop, g_prop, l₂ = get_pdf_samples(comp_prop_smp, prop_samples, log_posterior, prop_dist, lb, ub, names)
 
     ## Iterative algorithm
-    logml, i = iterative_algorithm(l₁, l₂, n₁, n₂; tol=tol, maxiter=maxiter)
+    logml, i = iterative_algorithm(l₁, l₂, n_post, n_prop; tol=tol, maxiter=maxiter, use_ess=use_ess)
     return LogMarginalLikelihood(logml, i, p_post, g_post, p_prop, g_prop)
 end
 
