@@ -20,7 +20,7 @@ end
 
 ## Iterative algo
 # Note that for ESS, the case of multiple chains is not dealt with correctly.
-function iterative_algorithm(l₁, l₂, n₁, n₂; tol, maxiter, use_ess)
+function iterative_algorithm(l₁, l₂, n₁, n₂; tol, maxiter, use_ess, n_chains=1)
 
     lstar = median(l₁)
     r = exp(logsumexp(l₂) - log(n₂) - lstar)
@@ -49,7 +49,7 @@ function iterative_algorithm(l₁, l₂, n₁, n₂; tol, maxiter, use_ess)
         logml = logmlnew
         r = rnew
         if use_ess
-            n1_ess = n₁ / ess(denomterms)
+            n1_ess = n₁ / ess(reshape(denomterms, :, n_chains))
             s₁ = n1_ess / (n1_ess + n₂)
             s₂ = n₂ / (n1_ess + n₂)
         end

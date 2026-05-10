@@ -58,7 +58,7 @@ end
         ISSN 0022-2496,
         https://doi.org/10.1016/j.jmp.2017.09.005.
 """
-function bridgesampling(samples::AbstractMatrix, log_posterior::Function, lb, ub; n_prop=nothing, tol=1e-10, maxiter=1_000, names=nothing, use_ess=true)
+function bridgesampling(samples::Array, log_posterior::Function, lb, ub; n_prop=nothing, tol=1e-10, maxiter=1_000, names=nothing, use_ess=true)
     lb = informissing.(lb)
     ub = informissing.(ub)
     nd, ns = size(samples) 
