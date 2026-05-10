@@ -43,5 +43,5 @@ logjacobian_contribution(x, ::Missing, ub) = x
 # With bijectors
 function logjacobian_contribution(x, dist::Distribution, trans::Bool)
     b =  Bijectors.bijector(dist)
-    return trans ? Bijectors.logabsdetjac(b, Bijectors.invlink(dist, x)) : 0.0
+    return trans ? Bijectors.logabsdetjac(Bijectors.inverse(b), x) : 0.0
 end

@@ -19,34 +19,40 @@ end
 
 
 ## Iterative algo
-function iterative_algorithm(l₁, l₂, n₁, n₂; tol, maxiter)
+# Note that for ESS, the case of multiple chains is not dealt with correctly.
+function iterative_algorithm(l₁, l₂, n₁, n₂; tol, maxiter, use_ess, n_chains=1)
 
     lstar = median(l₁)
-    r = 0.0
+    r = exp(logsumexp(l₂) - log(n₂) - lstar)
     s₁ = n₁ / (n₁ + n₂)
     s₂ = n₂ / (n₁ + n₂)
 
-    logml = -Inf
-    ϵ = 0.0 
+    logml = NaN
+    denomterms = zeros(n₁)
     for i = 1:maxiter
-        numterm = 0.0
-        denomterm = 0.0
-        for (l₁ⱼ, l₂ⱼ) in zip(l₁, l₂)
-            el1 = clamp(exp(l₁ⱼ - lstar), 0.0, 1e100) # Avoiding numerical errors
-            el2 = clamp(exp(l₂ⱼ - lstar), 1e-100, 1e100)
-            numterm += el2 / (s₁ * el2 + s₂ * r)
-            denomterm += 1 / (s₁ * el1 + s₂ * r)
-
+        for j1 in 1:n₁
+            el1 = exp(l₁[j1] - lstar)
+            denomterms[j1] = 1 / (s₁ * el1 + s₂ * r)
         end
-        rnew = (1/n₂) * numterm / (denomterm / n₁)
+        numterm = 0.0
+        for l₂ⱼ in l₂
+            el2 = exp(l₂ⱼ - lstar)
+            numterm += el2 / (s₁ * el2 + s₂ * r)
+        end
+        rnew = (numterm/n₂) / (sum(denomterms)/n₁)
         
         logmlnew = log(rnew) + lstar
-        ϵ = abs((logmlnew - logml) / logmlnew)
+        ϵ = abs(logmlnew - logml)
         if ϵ < tol
             return logmlnew, i
         end
         logml = logmlnew
         r = rnew
+        if use_ess
+            n1_ess = n₁ / ess(reshape(denomterms, :, n_chains))
+            s₁ = n1_ess / (n1_ess + n₂)
+            s₂ = n₂ / (n1_ess + n₂)
+        end
     end
     @warn "Maximum number of iterations ($maxiter) reached before convergence under the tolerance level $tol"
     return logml, maxiter

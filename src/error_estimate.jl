@@ -1,4 +1,4 @@
-function error_estimate(LML)
+function error_estimate(LML; n_chains=1)
     lm = value(LML)
     p_posterior = exp.(LML.p_posterior .- lm)
     p_proposal = exp.(LML.p_proposal .- lm)
@@ -12,7 +12,7 @@ function error_estimate(LML)
     f1 = p_proposal ./ (s1 * p_proposal + s2 * g_proposal)
     f2 = g_posterior ./ (s1 * p_posterior + s2 * g_posterior)
 
-    ρ_f2 = spectrum0(f2)
+    ρ_f2 = n1/ess(reshape(f2, :, n_chains))
     
     re2 = 1/n2 * var( f1 ) / mean( f1 )^2
     re2 += ρ_f2/n1 * var( f2 ) / mean( f2 )^2

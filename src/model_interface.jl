@@ -2,14 +2,14 @@
 
 function log_posterior_func(mdl, paramnames)
     vi = DynamicPPL.VarInfo(mdl)
-    vns = DynamicPPL.VarName.(paramnames)
+    vns = [@varname($sym) for sym in paramnames]
     dist_vec = [DynamicPPL.getdist(vi, vn) for vn in vns]
     function log_posterior(paramvals)
-        for i in eachindex(paramvals)
-            DynamicPPL.setindex!(vi, paramvals[i], vns[i])
+        for (vn, val) in zip(vns, paramvals)
+            vi[vn] = val
         end
         return DynamicPPL.logjoint(mdl, vi)
-    end
+    end    
     return log_posterior, dist_vec
 end
 

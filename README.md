@@ -57,8 +57,8 @@ end
 # Sample
 M0 = H0(y)
 M1 = H1(y)
-chn0 = sample(M0, NUTS(), MCMCThreads(), 50_000, 3, burnin=2000)
-chn1 = sample(M1, NUTS(), MCMCThreads(), 50_000, 3, burnin=2000)
+chn0 = sample(M0, NUTS(), MCMCThreads(), 50_000, 3)
+chn1 = sample(M1, NUTS(), MCMCThreads(), 50_000, 3)
 
 # Estimate log marginal likelihood : directly with the DynamicPPL model 
 L0 = bridgesampling(chn0, M0)
